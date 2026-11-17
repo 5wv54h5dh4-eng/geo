@@ -4,7 +4,7 @@ export default async (req, res) => {
   }
 
   const body = req.body;
-  const token = '9016650193:AAGzaSMvhfAd56jE5rx2Gf5fHcH1CDHVHGU';
+  const token = '9016650193:AAHv_Iea7ZeUKiDbtXL910v5mfy5NSCHEsw';
 
   if (body.message) {
     const chatId = body.message.chat.id;
