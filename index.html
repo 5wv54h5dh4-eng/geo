@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Поделиться геопозицией</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+      body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f0f2f5; }
+      button { padding: 16px 32px; font-size: 18px; background: #2481cc; color: white; border: none; border-radius: 8px; cursor: pointer; }
+      button:disabled { background: #ccc; }
+      #status { margin-top: 16px; color: #555; }
+    </style>
+  </head>
+  <body>
+    <h2>Поделиться местоположением</h2>
+    <p>Нажмите кнопку, чтобы отправить координаты владельцу.</p>
+    <button id="shareBtn">🗺️ Поделиться геопозицией</button>
+    <p id="status"></p>
+
+    <script>
+      const btn = document.getElementById('shareBtn');
+      const status = document.getElementById('status');
+
+      btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        btn.textContent = '⏳ Отправка...';
+        status.textContent = '';
+
+        if (!navigator.geolocation) {
+          status.textContent = 'Геолокация не поддерживается в этом браузере.';
+          btn.disabled = false;
+          btn.textContent = '🗺️ Поделиться геопозицией';
+          return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+          async (position) => {
+            const data = {
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+              accuracy: position.coords.accuracy
+            };
+
+            try {
+              const res = await fetch('/api/track', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+              });
+
+              if (res.ok) {
+                status.textContent = '✅ Координаты успешно отправлены!';
+                btn.textContent = 'Отправлено!';
+              } else {
+                status.textContent = '❌ Ошибка при отправке.';
+                btn.disabled = false;
+                btn.textContent = '🗺️ Поделиться геопозицией';
+              }
+            } catch (err) {
+              status.textContent = '❌ Ошибка сети.';
+              btn.disabled = false;
+              btn.textContent = '🗺️ Поделиться геопозицией';
+            }
+          },
+          () => {
+            status.textContent = '❌ Доступ к геолокации отклонён.';
+            btn.disabled = false;
+            btn.textContent = '🗺️ Поделиться геопозицией';
+          },
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+      });
+    </script>
+  </body>
+</html>
